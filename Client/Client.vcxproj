@@ -27,9 +27,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{650a6de1-f78b-424f-89c2-245648f0f368}</ProjectGuid>
+    <ProjectGuid>{eb6a0578-22bc-41cb-9eb2-5e561dece34e}</ProjectGuid>
     <Keyword>Linux</Keyword>
-    <RootNamespace>Tcp_C_Linux</RootNamespace>
+    <RootNamespace>Client</RootNamespace>
     <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
     <ApplicationType>Linux</ApplicationType>
     <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
@@ -60,6 +60,9 @@
   <ImportGroup Label="Shared" />
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LibraryPath>C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\lib\gcc\x86_64-linux-gnu\7\include;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\local\include;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\lib\gcc\x86_64-linux-gnu\7\include-fixed;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\include\x86_64-linux-gnu;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\include;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
   </ItemGroup>

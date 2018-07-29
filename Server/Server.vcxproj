@@ -27,9 +27,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{650a6de1-f78b-424f-89c2-245648f0f368}</ProjectGuid>
+    <ProjectGuid>{0386c3b8-9c1d-43cd-9054-97c9a2fa1f95}</ProjectGuid>
     <Keyword>Linux</Keyword>
-    <RootNamespace>Tcp_C_Linux</RootNamespace>
+    <RootNamespace>Server</RootNamespace>
     <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
     <ApplicationType>Linux</ApplicationType>
     <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
@@ -60,10 +60,15 @@
   <ImportGroup Label="Shared" />
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LibraryPath>C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\lib\gcc\x86_64-linux-gnu\7\include;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\local\include;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\lib\gcc\x86_64-linux-gnu\7\include-fixed;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\include\x86_64-linux-gnu;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\include;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
+    <ClCompile Include="server.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="server.h" />
   </ItemGroup>
   <ItemDefinitionGroup />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
