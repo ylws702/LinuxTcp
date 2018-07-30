@@ -31,7 +31,6 @@ int begain_with(char *str1, char *str2);
 void connection();
 int senddata();
 void* recvdata();
-void deal(int sockfd, pthread_t* thread_id);
 
 int main(void)
 {
@@ -53,14 +52,14 @@ int main(void)
 				perror("Server Accept Failed:");
 				break;
 			}
-			pid_t childid;
-			if (childid = fork(), childid == 0)//子进程
-			{
-				printf("child process: %d created.\n", getpid());
-				close(server_socket_fd);//在子进程中关闭监听  
-				deal(new_server_socket_fd, &thread_id);//处理监听的连接  
-				exit(0);
-			}
+
+			pthread_create(&thread_id, NULL, recvdata, NULL);  //创建线程
+			printf("New thread created, thread_id: %lX\n", thread_id);
+			pthread_detach(thread_id); // 线程分离，结束时自动回收资源
+
+			senddata();
+
+			puts("Connection closed.");
 			break;
 		}
 	}
@@ -238,15 +237,4 @@ void* recvdata()
 			return 0;
 		}
 	}
-}
-
-void deal(int sockfd, pthread_t* thread_id)
-{
-
-	pthread_create(thread_id, NULL, recvdata, NULL);  //创建线程
-	pthread_detach(*thread_id); // 线程分离，结束时自动回收资源
-
-	senddata();
-
-	puts("Connection closed.");
 }

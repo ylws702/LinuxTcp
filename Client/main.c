@@ -1,13 +1,13 @@
-#include<netinet/in.h>  // sockaddr_in 
-#include<unistd.h>
-#include<sys/types.h>  // socket 
-#include<sys/socket.h>  // socket 
-#include<stdio.h>    // printf 
-#include<stdlib.h>    // exit 
-#include<string.h>    
-#include<strings.h>    // bzero 
-#include<arpa/inet.h>
-#include<pthread.h>
+#include <netinet/in.h>  // sockaddr_in 
+#include <unistd.h>
+#include <sys/types.h>  // socket 
+#include <sys/socket.h>  // socket 
+#include <stdio.h>    // printf 
+#include <stdlib.h>    // exit 
+#include <string.h>    
+#include <strings.h>    // bzero 
+#include <arpa/inet.h>
+#include <pthread.h>
 
 #define SERVER_PORT 5678
 #define BUFFER_SIZE 1024 
@@ -26,14 +26,17 @@ socklen_t server_addr_length = sizeof(server_addr);
 void send_file(char* file_name, int socket);
 void recv_file(char* file_name, int sockfd);
 int begain_with(char* str1, char *str2);
-void connection();
+int connection();
 int senddata();
 void* recvdata();
 
 int main()
 {
-
-	connection();
+	if (connection() != 0)
+	{
+		return -1;
+	}
+	puts("Connect to Server successfully!");
 
 	pthread_t thread_id;
 
@@ -116,7 +119,7 @@ int begain_with(char *str1, char *str2)
 	return memcmp(str1, str2, len2);
 }
 
-void connection()
+int connection()
 {
 	bzero(&client_addr, sizeof(client_addr));
 	client_addr.sin_family = AF_INET;
@@ -129,14 +132,14 @@ void connection()
 	if (client_socket_fd < 0)
 	{
 		perror("Create Socket Failed:");
-		exit(1);
+		return -1;
 	}
 
 	// 绑定客户端的socket和客户端的socket地址结构 非必需 
 	if (-1 == (bind(client_socket_fd, (struct sockaddr*)&client_addr, sizeof(client_addr))))
 	{
 		perror("Client Bind Failed:");
-		exit(1);
+		return -1;
 	}
 
 	// 声明一个服务器端的socket地址结构，并用服务器那边的IP地址及端口对其进行初始化，用于后面的连接 
@@ -145,7 +148,7 @@ void connection()
 	if (inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr) == 0)
 	{
 		perror("Server IP Address Error:");
-		exit(1);
+		return -1;
 	}
 	server_addr.sin_port = htons(SERVER_PORT);
 
@@ -153,8 +156,10 @@ void connection()
 	if (connect(client_socket_fd, (struct sockaddr*)&server_addr, server_addr_length) < 0)
 	{
 		perror("Can Not Connect To Server IP:");
-		exit(0);
+		return -1;
 	}
+
+	return 0;
 }
 
 int senddata()
@@ -187,12 +192,12 @@ int senddata()
 			return 0;
 		}
 	}
-
 }
 
 void* recvdata()
 {
-	while (1) {
+	while (1)
+	{
 		// recv函数接收数据到缓冲区recv_buffer中
 		bzero(recv_buffer, BUFFER_SIZE);
 		if (recv(client_socket_fd, recv_buffer, BUFFER_SIZE, MSG_WAITALL) < 0)
