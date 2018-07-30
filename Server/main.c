@@ -10,7 +10,7 @@
 #include <pthread.h>
 
 
-#define SERVER_PORT 5679
+#define SERVER_PORT 5678
 
 #define LENGTH_OF_LISTEN_QUEUE 20
 #define BUFFER_SIZE 1024
@@ -65,6 +65,11 @@ int main(void)
 		scanf("%s", send_msg);
 		bzero(send_buffer, BUFFER_SIZE);
 		strncpy(send_buffer, send_msg, strlen(send_msg) > BUFFER_SIZE ? BUFFER_SIZE : strlen(send_msg));
+		if (!strcmp(send_msg, "exit"))
+		{
+			puts("Server closing...");
+			return 0;
+		}
 		while (clients_using)
 		{
 			sleep(1);
@@ -192,21 +197,14 @@ int senddata(int socket_fd)
 	if (send(socket_fd, send_buffer, BUFFER_SIZE, 0) < 0)
 	{
 		perror("File Error:");
-		exit(1);
+		return -1;
 	}
-
 	if (begin_with(send_msg, "file:") == 1)
 	{
 		strncpy(send_name, send_msg + 5, FILE_NAME_MAX_SIZE - 4);
 		send_file(send_name, socket_fd);//send file
 	}
-
-	if (!strcmp(send_msg, "exit"))
-	{
-		close(socket_fd);
-		puts("Connection closed.");
-		return 0;
-	}
+	return 0;
 }
 
 void* recv_thread(void* sfd)
@@ -352,13 +350,21 @@ int list_remove(int socket_fd)
 		else
 		{
 			free(p);
-			p = NULL;
+			clients = NULL;
 			client_count--;
 			clients_using = 0;
 			return 0;
 		}
 	}
 	node* cur = p->next;
+	if (p->socket_fd == socket_fd)
+	{
+		free(p);
+		clients = cur;
+		client_count--;
+		clients_using = 0;
+		return 0;
+	}
 	while (cur != NULL)
 	{
 		if (socket_fd == cur->socket_fd)

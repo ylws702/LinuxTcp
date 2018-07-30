@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
-#define SERVER_PORT 5679
+#define SERVER_PORT 5678
 #define BUFFER_SIZE 1024 
 #define FILE_NAME_MAX_SIZE 512 
 char send_buffer[BUFFER_SIZE];
