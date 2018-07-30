@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Server", "Server\Server.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Client", "Client\Client.vcxproj", "{EB6A0578-22BC-41CB-9EB2-5E561DECE34E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "Test\Test.vcxproj", "{CF2704D5-10F2-4A1F-8207-86C42F09E348}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -41,6 +43,18 @@ Global
 		{EB6A0578-22BC-41CB-9EB2-5E561DECE34E}.Release|x64.Build.0 = Release|x64
 		{EB6A0578-22BC-41CB-9EB2-5E561DECE34E}.Release|x86.ActiveCfg = Release|x86
 		{EB6A0578-22BC-41CB-9EB2-5E561DECE34E}.Release|x86.Build.0 = Release|x86
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Debug|ARM.ActiveCfg = Debug|ARM
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Debug|ARM.Build.0 = Debug|ARM
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Debug|x64.ActiveCfg = Debug|x64
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Debug|x64.Build.0 = Debug|x64
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Debug|x86.ActiveCfg = Debug|x86
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Debug|x86.Build.0 = Debug|x86
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Release|ARM.ActiveCfg = Release|ARM
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Release|ARM.Build.0 = Release|ARM
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Release|x64.ActiveCfg = Release|x64
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Release|x64.Build.0 = Release|x64
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Release|x86.ActiveCfg = Release|x86
+		{CF2704D5-10F2-4A1F-8207-86C42F09E348}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

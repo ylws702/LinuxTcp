@@ -27,9 +27,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{0386c3b8-9c1d-43cd-9054-97c9a2fa1f95}</ProjectGuid>
+    <ProjectGuid>{cf2704d5-10f2-4a1f-8207-86c42f09e348}</ProjectGuid>
     <Keyword>Linux</Keyword>
-    <RootNamespace>Server</RootNamespace>
+    <RootNamespace>Test</RootNamespace>
     <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
     <ApplicationType>Linux</ApplicationType>
     <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
@@ -61,15 +61,12 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LibraryPath>C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\lib\gcc\x86_64-linux-gnu\7\include;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\local\include;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\lib\gcc\x86_64-linux-gnu\7\include-fixed;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\include\x86_64-linux-gnu;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\include;$(LibraryPath)</LibraryPath>
     <RemoteLdToolExe>gcc</RemoteLdToolExe>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="main.c" />
-    <ClCompile Include="server.c" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="server.h" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>

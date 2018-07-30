@@ -6,83 +6,43 @@
 #include<stdlib.h>    // exit 
 #include<string.h>    // bzero 
 #include<arpa/inet.h>
+#include<pthread.h>
 
-#define SERVER_PORT 8000 
+#define SERVER_PORT 5678
 #define BUFFER_SIZE 1024 
 #define FILE_NAME_MAX_SIZE 512 
-char buffer[BUFFER_SIZE];
+char send_buffer[BUFFER_SIZE];
+char send_msg[FILE_NAME_MAX_SIZE + 1] = "\0";
+char send_name[FILE_NAME_MAX_SIZE];
+char recv_buffer[BUFFER_SIZE];
+char recv_msg[FILE_NAME_MAX_SIZE + 1] = "\0";
+char recv_name[FILE_NAME_MAX_SIZE];
+struct sockaddr_in client_addr;
+struct sockaddr_in server_addr;
+int client_socket_fd = 0;
+socklen_t server_addr_length = sizeof(server_addr);
 
 void send_file(char* file_name, int socket);
 void recv_file(char* file_name, int sockfd);
 int begain_with(char* str1, char *str2);
-
+void connection();
+int senddata();
+void* recvdata();
 
 int main()
 {
-	// 声明并初始化一个客户端的socket地址结构 
-	struct sockaddr_in client_addr;
-	bzero(&client_addr, sizeof(client_addr));
-	client_addr.sin_family = AF_INET;
-	client_addr.sin_addr.s_addr = htons(INADDR_ANY);
-	client_addr.sin_port = htons(0);
 
-	// 创建socket，若成功，返回socket描述符 
-	int client_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (client_socket_fd < 0)
-	{
-		perror("Create Socket Failed:");
-		exit(1);
-	}
+	connection();
 
-	// 绑定客户端的socket和客户端的socket地址结构 非必需 
-	if (-1 == (bind(client_socket_fd, (struct sockaddr*)&client_addr, sizeof(client_addr))))
-	{
-		perror("Client Bind Failed:");
-		exit(1);
-	}
+	pthread_t thread_id;
 
-	// 声明一个服务器端的socket地址结构，并用服务器那边的IP地址及端口对其进行初始化，用于后面的连接 
-	struct sockaddr_in server_addr;
-	bzero(&server_addr, sizeof(server_addr));
-	server_addr.sin_family = AF_INET;
-	if (inet_pton(AF_INET, "0.0.0.0", &server_addr.sin_addr) == 0)
-	{
-		perror("Server IP Address Error:");
-		exit(1);
-	}
-	server_addr.sin_port = htons(SERVER_PORT);
-	socklen_t server_addr_length = sizeof(server_addr);
+	pthread_create(&thread_id, NULL, recvdata, NULL);  //创建线程
+	pthread_detach(thread_id); // 线程分离，结束时自动回收资源
 
-	// 向服务器发起连接，连接成功后client_socket_fd代表了客户端和服务器的一个socket连接 
-	if (connect(client_socket_fd, (struct sockaddr*)&server_addr, server_addr_length) < 0)
-	{
-		perror("Can Not Connect To Server IP:");
-		exit(0);
-	}
-	char msg[FILE_NAME_MAX_SIZE + 1]="\0";
-	while (strcmp(msg, "exit") != 0)
-	{
-		// 输入文件名 并放到缓冲区buffer中等待发送 
-		bzero(msg, FILE_NAME_MAX_SIZE + 1);
-		printf("msg: ");
-		scanf("%s", msg);
-		bzero(buffer, BUFFER_SIZE);
-		strncpy(buffer, msg, strlen(msg)>BUFFER_SIZE ? BUFFER_SIZE : strlen(msg));
+	senddata();
 
-		// 向服务器发送buffer中的数据 
-		if (send(client_socket_fd, buffer, BUFFER_SIZE, 0) < 0)
-		{
-			perror("File:");
-			exit(1);
-		}
-		char name[FILE_NAME_MAX_SIZE];
-		if (begain_with(msg, "file:") == 1)
-		{
-			strncpy(name, msg + 5, FILE_NAME_MAX_SIZE - 4);
-			send_file(name, client_socket_fd);//send file
-		}
-	}
 	close(client_socket_fd);
+
 	return 0;
 }
 
@@ -97,17 +57,17 @@ void send_file(char* file_name, int socket)
 	}
 	else
 	{
-		bzero(buffer, BUFFER_SIZE);
+		bzero(send_buffer, BUFFER_SIZE);
 		int length = 0;
 		// 每读取一段数据，便将其发送给客户端，循环直到文件读完为止
-		while ((length = fread(buffer, sizeof(char), BUFFER_SIZE, fp)) > 0)
+		while ((length = fread(send_buffer, sizeof(char), BUFFER_SIZE, fp)) > 0)
 		{
-			if (send(socket, buffer, length, 0) < 0)
+			if (send(socket, send_buffer, length, 0) < 0)
 			{
 				printf("Send File:%s Failed./n", file_name);
 				break;
 			}
-			bzero(buffer, BUFFER_SIZE);
+			bzero(send_buffer, BUFFER_SIZE);
 		}
 
 		// 关闭文件
@@ -125,28 +85,24 @@ void recv_file(char* file_name, int sockfd)
 		exit(1);
 	}
 
-	// 从服务器接收数据到buffer中 
+	// 从服务器接收数据到send_buffer中 
 	// 每接收一段数据，便将其写入文件中，循环直到文件接收完并写完为止 
-	bzero(buffer, BUFFER_SIZE);
+	bzero(send_buffer, BUFFER_SIZE);
 	int length = 0;
-	while ((length = recv(sockfd, buffer, BUFFER_SIZE, 0)) > 0)
+	while ((length = recv(sockfd, send_buffer, BUFFER_SIZE, 0)) > 0)
 	{
-		if (fwrite(buffer, sizeof(char), length, fp) < length)
+		if (fwrite(send_buffer, sizeof(char), length, fp) < length)
 		{
 			printf("File:\t%s Write Failed\n", file_name);
 			break;
 		}
-		bzero(buffer, BUFFER_SIZE);
+		bzero(send_buffer, BUFFER_SIZE);
 	}
 
 	// 接收成功后，关闭文件
 	printf("Receive File:\t%s Successful\n", file_name);
 	fclose(fp);
 }
-
-
-
-
 
 int begain_with(char *str1, char *str2)
 {
@@ -166,4 +122,103 @@ int begain_with(char *str1, char *str2)
 		i++;
 	}
 	return 1;
+}
+
+void connection()
+{
+	bzero(&client_addr, sizeof(client_addr));
+	client_addr.sin_family = AF_INET;
+	client_addr.sin_addr.s_addr = htons(INADDR_ANY);
+	client_addr.sin_port = htons(0);
+
+	// 创建socket，若成功，返回socket描述符 
+	client_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (client_socket_fd < 0)
+	{
+		perror("Create Socket Failed:");
+		exit(1);
+	}
+
+	// 绑定客户端的socket和客户端的socket地址结构 非必需 
+	if (-1 == (bind(client_socket_fd, (struct sockaddr*)&client_addr, sizeof(client_addr))))
+	{
+		perror("Client Bind Failed:");
+		exit(1);
+	}
+
+	// 声明一个服务器端的socket地址结构，并用服务器那边的IP地址及端口对其进行初始化，用于后面的连接 
+	bzero(&server_addr, sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+	if (inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr) == 0)
+	{
+		perror("Server IP Address Error:");
+		exit(1);
+	}
+	server_addr.sin_port = htons(SERVER_PORT);
+
+	// 向服务器发起连接，连接成功后client_socket_fd代表了客户端和服务器的一个socket连接 
+	if (connect(client_socket_fd, (struct sockaddr*)&server_addr, server_addr_length) < 0)
+	{
+		perror("Can Not Connect To Server IP:");
+		exit(0);
+	}
+}
+
+int senddata()
+{
+	while (1)
+	{
+		// 输入文件名 并放到缓冲区send_buffer中等待发送 
+		bzero(send_msg, FILE_NAME_MAX_SIZE + 1);
+		scanf("%s", send_msg);
+		bzero(send_buffer, BUFFER_SIZE);
+		strncpy(send_buffer, send_msg, strlen(send_msg) > BUFFER_SIZE ? BUFFER_SIZE : strlen(send_msg));
+
+		// 向服务器发送send_buffer中的数据 
+		if (send(client_socket_fd, send_buffer, BUFFER_SIZE, 0) < 0)
+		{
+			perror("File Error:");
+			exit(1);
+		}
+
+		if (begain_with(send_msg, "file:") == 1)
+		{
+			strncpy(send_name, send_msg + 5, FILE_NAME_MAX_SIZE - 4);
+			send_file(send_name, client_socket_fd);//send file
+		}
+
+		if (!strcmp(send_msg, "exit"))
+		{
+			puts("Connection closed.");
+			close(client_socket_fd);
+			return 0;
+		}
+	}
+
+}
+
+void* recvdata()
+{
+	while (1) {
+		// recv函数接收数据到缓冲区recv_buffer中
+		bzero(recv_buffer, BUFFER_SIZE);
+		if (recv(client_socket_fd, recv_buffer, BUFFER_SIZE, MSG_WAITALL) < 0)
+		{
+			perror("Server Recieve Data Failed:");
+			return((void*)0);
+		}
+		// 然后从recv_buffer(缓冲区)拷贝到recv_msg中
+		bzero(recv_msg, FILE_NAME_MAX_SIZE + 1);
+		strncpy(recv_msg, recv_buffer, strlen(recv_buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(recv_buffer));
+
+		printf("server: %s\n", recv_msg);
+		if (begain_with(recv_msg, "file:") == 1)
+		{
+			//send files
+			strncpy(recv_name, recv_msg + 5, FILE_NAME_MAX_SIZE - 4);
+			recv_file(recv_name, client_socket_fd);
+		}
+	}
+	return((void*)0);
 }
