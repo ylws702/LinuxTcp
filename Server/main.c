@@ -9,7 +9,8 @@
 #include <strings.h>   // bzero
 #include <pthread.h>
 
-#define SERVER_PORT 5678
+
+#define SERVER_PORT 5679
 
 #define LENGTH_OF_LISTEN_QUEUE 20
 #define BUFFER_SIZE 1024
@@ -21,50 +22,45 @@ char recv_buffer[BUFFER_SIZE];
 char recv_msg[FILE_NAME_MAX_SIZE + 1] = "\0";
 char recv_name[FILE_NAME_MAX_SIZE];
 struct sockaddr_in server_addr;
-struct sockaddr_in client_addr;
 int server_socket_fd = 0;
-int new_server_socket_fd = 0;
 
 void send_file(char* file_name, int socket);
 void recv_file(char* file_name, int sockfd);
-int begain_with(char *str1, char *str2);
+int begin_with(char *str1, char *str2);
 void connection();
-int senddata();
-void* recvdata();
+int senddata(int socket_fd);
+void* recv_thread(void* args);
+void* listen_thread();
+
+typedef struct client_info_node
+{
+	struct sockaddr_in client_addr;
+	int socket_fd;
+	pthread_t conn_thread_id;
+	struct client_info_node* next;
+}node;
+
+node* clients = NULL;
+int clients_using = 0;
+//连接客户端数量
+size_t client_count = 0;
+#define MAX_CLIENT 20
+
+int list_add(const node* client);
+int list_remove(int socket_fd);
 
 int main(void)
 {
+
 	connection();
-	pthread_t thread_id;
+	pthread_t listen_thread_id;
+
+	pthread_create(&listen_thread_id, NULL, listen_thread, NULL);  //创建监听线程
+	pthread_detach(listen_thread_id); // 线程分离，结束时自动回收资源
 	while (1)
 	{
-		// 定义客户端的socket地址结构
-		socklen_t client_addr_length = sizeof(client_addr);
-		// 接受连接请求，返回一个新的socket(描述符)，这个新socket用于同连接的客户端通信
-		// accept函数会把连接到的客户端信息写到client_addr中
-		puts("Waiting for a connection...");
-		new_server_socket_fd = accept(server_socket_fd, (struct sockaddr*)&client_addr, &client_addr_length);
-		puts("Connection established.");
-		while (1)
-		{
-			if (new_server_socket_fd < 0)
-			{
-				perror("Server Accept Failed:");
-				break;
-			}
 
-			pthread_create(&thread_id, NULL, recvdata, NULL);  //创建线程
-			printf("New thread created, thread_id: %lX\n", thread_id);
-			pthread_detach(thread_id); // 线程分离，结束时自动回收资源
-
-			senddata();
-
-			puts("Connection closed.");
-			break;
-		}
 	}
-	// 关闭监听用的socket
-	close(server_socket_fd);
 	return 0;
 }
 
@@ -129,7 +125,7 @@ void recv_file(char* file_name, int sockfd)
 	fclose(fp);
 }
 
-int begain_with(char *str1, char *str2)
+int begin_with(char *str1, char *str2)
 {
 	if (str1 == NULL || str2 == NULL)
 		return -1;
@@ -173,7 +169,7 @@ void connection()
 	}
 }
 
-int senddata()
+int senddata(int socket_fd)
 {
 	while (1)
 	{
@@ -184,21 +180,21 @@ int senddata()
 		strncpy(send_buffer, send_msg, strlen(send_msg) > BUFFER_SIZE ? BUFFER_SIZE : strlen(send_msg));
 
 		// 向客户机发送send_buffer中的数据 
-		if (send(new_server_socket_fd, send_buffer, BUFFER_SIZE, 0) < 0)
+		if (send(socket_fd, send_buffer, BUFFER_SIZE, 0) < 0)
 		{
 			perror("File Error:");
 			exit(1);
 		}
 
-		if (begain_with(send_msg, "file:") == 1)
+		if (begin_with(send_msg, "file:") == 1)
 		{
 			strncpy(send_name, send_msg + 5, FILE_NAME_MAX_SIZE - 4);
-			send_file(send_name, new_server_socket_fd);//send file
+			send_file(send_name, socket_fd);//send file
 		}
 
 		if (!strcmp(send_msg, "exit"))
 		{
-			close(new_server_socket_fd);
+			close(socket_fd);
 			puts("Connection closed.");
 			return 0;
 		}
@@ -206,14 +202,14 @@ int senddata()
 
 }
 
-void* recvdata()
+void* recv_thread(void* sfd)
 {
-	pid_t pid = getpid();
+	int socket_fd = *(int*)sfd;
 	while (1)
 	{
 		// recv函数接收数据到缓冲区recv_buffer中
 		bzero(recv_buffer, BUFFER_SIZE);
-		if (recv(new_server_socket_fd, recv_buffer, BUFFER_SIZE, MSG_WAITALL) < 0)
+		if (recv(socket_fd, recv_buffer, BUFFER_SIZE, MSG_WAITALL) < 0)
 		{
 			perror("Server Recieve Data Failed:");
 			return((void*)0);
@@ -222,19 +218,137 @@ void* recvdata()
 		bzero(recv_msg, FILE_NAME_MAX_SIZE + 1);
 		strncpy(recv_msg, recv_buffer, strlen(recv_buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(recv_buffer));
 
-		printf("client %d: %s\n", pid, recv_msg);
+		printf("client %d: %s\n", socket_fd, recv_msg);
 
-		if (begain_with(recv_msg, "file:") == 1)
+		if (begin_with(recv_msg, "file:") == 1)
 		{
 			//recv files
 			strncpy(recv_name, recv_msg + 5, FILE_NAME_MAX_SIZE - 4);
-			recv_file(recv_name, new_server_socket_fd);
+			recv_file(recv_name, socket_fd);
 		}
 
 		// 关闭与客户端的连接
-		if (!strcmp(recv_msg, "exit"))
+		if (strcmp(recv_msg, "exit") == 0)
 		{
+			list_remove(socket_fd);
+			return NULL;
+		}
+	}
+}
+
+void* listen_thread()
+{
+	node client;
+	socklen_t client_addr_length;
+	while (1)
+	{
+		//超过连接数量,等待
+		while (client_count >= MAX_CLIENT)
+		{
+			sleep(1);
+		}
+		//client_addr长度
+		client_addr_length = sizeof(client.client_addr);
+		// 接受连接请求，返回一个新的socket(描述符)，这个新socket用于同连接的客户端通信
+		// accept函数会把连接到的客户端信息写到client_addr中
+		puts("Waiting for a new connection...");
+		client.socket_fd = accept(server_socket_fd, (struct sockaddr*)&client.client_addr, &client_addr_length);
+		printf("Connection established, socket file descriptor: %d\n", client.socket_fd);
+		if (client.socket_fd < 0)
+		{
+			perror("Server Accept Failed:");
+			continue;
+		}
+		list_add(&client);
+		//创建线程
+		if (pthread_create(&client.conn_thread_id, NULL, recv_thread, &client.socket_fd)!=0)
+		{
+			puts("New thread created failed!");
+		}
+		printf("New thread created, thread_id: %lX\n", client.conn_thread_id);
+		pthread_detach(client.conn_thread_id); // 线程分离，结束时自动回收资源
+	}
+	//无法访问的代码
+	//// 关闭监听用的socket
+	//close(server_socket_fd);
+}
+
+int list_add(const node* client)
+{
+	while (clients_using)
+	{
+		sleep(1);
+	}
+	if (client_count >= MAX_CLIENT)
+	{
+		return -1;
+	}
+	clients_using = 1;
+	node* p = clients;
+	int socket_fd = client->socket_fd;
+	while (p != NULL)
+	{
+		if (socket_fd == p->socket_fd)
+		{
+			clients_using = 0;
+			return -1;
+		}
+		p = p->next;
+	}
+	p = (node*)malloc(sizeof(node));
+	p->client_addr = client->client_addr;
+	p->socket_fd = socket_fd;
+	p->conn_thread_id = client->conn_thread_id;
+	p->next = NULL;
+	client_count++;
+	clients_using = 0;
+	return 0;
+}
+
+int list_remove(int socket_fd)
+{
+	while (clients_using)
+	{
+		sleep(1);
+	}
+	if (0 == client_count)
+	{
+		return -1;
+	}
+	clients_using = 1;
+	node* p = clients;
+	if (1 == client_count)
+	{
+		if (p->socket_fd != socket_fd)
+		{
+			printf("Remove client %d error: not found!", socket_fd);
+			clients_using = 0;
+			return -1;
+		}
+		else
+		{
+			free(p);
+			p = NULL;
+			client_count--;
+			clients_using = 0;
 			return 0;
 		}
 	}
+	node* cur = p->next;
+	while (cur != NULL)
+	{
+		if (socket_fd == cur->socket_fd)
+		{
+			p->next = cur->next;
+			free(cur);
+			client_count--;
+			clients_using = 0;
+			return -1;
+		}
+		p = cur;
+		cur = cur->next;
+	}
+	printf("Remove client %d error: not found!", socket_fd);
+	clients_using = 0;
+	return -1;
 }

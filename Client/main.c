@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
-#define SERVER_PORT 5678
+#define SERVER_PORT 5679
 #define BUFFER_SIZE 1024 
 #define FILE_NAME_MAX_SIZE 512 
 char send_buffer[BUFFER_SIZE];
@@ -25,7 +25,7 @@ socklen_t server_addr_length = sizeof(server_addr);
 
 void send_file(char* file_name, int socket);
 void recv_file(char* file_name, int sockfd);
-int begain_with(char* str1, char *str2);
+int begin_with(char* str1, char *str2);
 int connection();
 int senddata();
 void* recvdata();
@@ -108,7 +108,7 @@ void recv_file(char* file_name, int sockfd)
 	fclose(fp);
 }
 
-int begain_with(char *str1, char *str2)
+int begin_with(char *str1, char *str2)
 {
 	if (str1 == NULL || str2 == NULL)
 		return -1;
@@ -179,7 +179,7 @@ int senddata()
 			exit(1);
 		}
 
-		if (begain_with(send_msg, "file:") == 1)
+		if (begin_with(send_msg, "file:") == 1)
 		{
 			strncpy(send_name, send_msg + 5, FILE_NAME_MAX_SIZE - 4);
 			send_file(send_name, client_socket_fd);//send file
@@ -210,7 +210,7 @@ void* recvdata()
 		strncpy(recv_msg, recv_buffer, strlen(recv_buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(recv_buffer));
 
 		printf("server: %s\n", recv_msg);
-		if (begain_with(recv_msg, "file:") == 1)
+		if (begin_with(recv_msg, "file:") == 1)
 		{
 			//send files
 			strncpy(recv_name, recv_msg + 5, FILE_NAME_MAX_SIZE - 4);
