@@ -9,10 +9,11 @@
 #include <strings.h>   // bzero
 #include <pthread.h>
 
+typedef struct client_info_node node;
 
 #define SERVER_PORT 5678
 
-#define LENGTH_OF_LISTEN_QUEUE 20
+#define LENGTH_OF_LISTEN_QUEUE 5
 #define BUFFER_SIZE 1024
 #define FILE_NAME_MAX_SIZE 512
 char send_buffer[BUFFER_SIZE];
@@ -23,7 +24,6 @@ char recv_msg[FILE_NAME_MAX_SIZE + 1] = "\0";
 char recv_name[FILE_NAME_MAX_SIZE];
 struct sockaddr_in server_addr;
 int server_socket_fd = 0;
-
 void send_file(char* file_name, int socket);
 void recv_file(char* file_name, int sockfd);
 int begin_with(char *str1, char *str2);
@@ -32,19 +32,19 @@ int senddata(int socket_fd);
 void* recv_thread(void* args);
 void* listen_thread();
 
-typedef struct client_info_node
+struct client_info_node
 {
 	struct sockaddr_in client_addr;
 	int socket_fd;
 	pthread_t conn_thread_id;
 	struct client_info_node* next;
-}node;
+};
 
 node* clients = NULL;
 int clients_using = 0;
 //连接客户端数量
 size_t client_count = 0;
-#define MAX_CLIENT 20
+#define MAX_CLIENT LENGTH_OF_LISTEN_QUEUE
 
 int list_add(const node* client);
 int list_remove(int socket_fd);
@@ -199,7 +199,7 @@ int senddata(int socket_fd)
 		perror("File Error:");
 		return -1;
 	}
-	if (begin_with(send_msg, "file:") == 1)
+	if (begin_with(send_msg, "file:") == 0)
 	{
 		strncpy(send_name, send_msg + 5, FILE_NAME_MAX_SIZE - 4);
 		send_file(send_name, socket_fd);//send file
@@ -210,6 +210,7 @@ int senddata(int socket_fd)
 void* recv_thread(void* sfd)
 {
 	int socket_fd = *(int*)sfd;
+	int err_count = 0;
 	while (1)
 	{
 		// recv函数接收数据到缓冲区recv_buffer中
@@ -223,13 +224,26 @@ void* recv_thread(void* sfd)
 		bzero(recv_msg, FILE_NAME_MAX_SIZE + 1);
 		strncpy(recv_msg, recv_buffer, strlen(recv_buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(recv_buffer));
 
-		printf("client %d: %s\n", socket_fd, recv_msg);
+		if (0 == recv_msg[0])
+		{
+			if (err_count > 3)
+			{
+				puts("Connect broken");
+				return NULL;
+			}
+			err_count++;
+			continue;
+		}
 
-		if (begin_with(recv_msg, "file:") == 1)
+		if (begin_with(recv_msg, "file:") == 0)
 		{
 			//recv files
 			strncpy(recv_name, recv_msg + 5, FILE_NAME_MAX_SIZE - 4);
 			recv_file(recv_name, socket_fd);
+		}
+		else
+		{
+			printf("client %d: %s\n", socket_fd, recv_msg);
 		}
 
 		// 关闭与客户端的连接
@@ -252,6 +266,7 @@ void* listen_thread()
 		//超过连接数量,等待
 		while (client_count >= MAX_CLIENT)
 		{
+			puts("Listening paused because of to many connections.");
 			sleep(1);
 		}
 		//client_addr长度

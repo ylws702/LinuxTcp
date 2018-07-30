@@ -180,7 +180,7 @@ int senddata()
 			exit(1);
 		}
 
-		if (begin_with(send_msg, "file:") == 1)
+		if (begin_with(send_msg, "file:") == 0)
 		{
 			strncpy(send_name, send_msg + 5, FILE_NAME_MAX_SIZE - 4);
 			send_file(send_name, client_socket_fd);//send file
@@ -205,7 +205,7 @@ void* recvdata()
 		if (recv(client_socket_fd, recv_buffer, BUFFER_SIZE, MSG_WAITALL) < 0)
 		{
 			perror("Server Recieve Data Failed:");
-			return((void*)0);
+			return NULL;
 		}
 		// 然后从recv_buffer(缓冲区)拷贝到recv_msg中
 		bzero(recv_msg, FILE_NAME_MAX_SIZE + 1);
@@ -214,18 +214,19 @@ void* recvdata()
 		{
 			if (err_count > 3)
 			{
-				puts("Connect error");
+				puts("Connect broken");
+				return NULL;
 			}
 			err_count++;
 			continue;
 		}
 		printf("Server: %s\n", recv_msg);
-		if (begin_with(recv_msg, "file:") == 1)
+		if (begin_with(recv_msg, "file:") == 0)
 		{
 			//send files
 			strncpy(recv_name, recv_msg + 5, FILE_NAME_MAX_SIZE - 4);
 			recv_file(recv_name, client_socket_fd);
 		}
 	}
-	return((void*)0);
+	return NULL;
 }
