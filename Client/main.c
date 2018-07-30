@@ -168,6 +168,7 @@ int senddata()
 	{
 		// 输入文件名 并放到缓冲区send_buffer中等待发送 
 		bzero(send_msg, FILE_NAME_MAX_SIZE + 1);
+		printf("Send:");
 		scanf("%s", send_msg);
 		bzero(send_buffer, BUFFER_SIZE);
 		strncpy(send_buffer, send_msg, strlen(send_msg) > BUFFER_SIZE ? BUFFER_SIZE : strlen(send_msg));
@@ -196,6 +197,7 @@ int senddata()
 
 void* recvdata()
 {
+	int err_count = 0;
 	while (1)
 	{
 		// recv函数接收数据到缓冲区recv_buffer中
@@ -208,8 +210,16 @@ void* recvdata()
 		// 然后从recv_buffer(缓冲区)拷贝到recv_msg中
 		bzero(recv_msg, FILE_NAME_MAX_SIZE + 1);
 		strncpy(recv_msg, recv_buffer, strlen(recv_buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(recv_buffer));
-
-		printf("server: %s\n", recv_msg);
+		if (0 == recv_msg[0])
+		{
+			if (err_count > 3)
+			{
+				puts("Connect error");
+			}
+			err_count++;
+			continue;
+		}
+		printf("Server: %s\n", recv_msg);
 		if (begin_with(recv_msg, "file:") == 1)
 		{
 			//send files

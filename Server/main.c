@@ -57,9 +57,26 @@ int main(void)
 
 	pthread_create(&listen_thread_id, NULL, listen_thread, NULL);  //创建监听线程
 	pthread_detach(listen_thread_id); // 线程分离，结束时自动回收资源
+	node* cur;
 	while (1)
 	{
-
+		// 输入文件名 并放到缓冲区send_buffer中等待发送 
+		bzero(send_msg, FILE_NAME_MAX_SIZE + 1);
+		scanf("%s", send_msg);
+		bzero(send_buffer, BUFFER_SIZE);
+		strncpy(send_buffer, send_msg, strlen(send_msg) > BUFFER_SIZE ? BUFFER_SIZE : strlen(send_msg));
+		while (clients_using)
+		{
+			sleep(1);
+		}
+		clients_using = 1;
+		cur = clients;
+		while (cur!=NULL)
+		{
+			senddata(cur->socket_fd);
+			cur = cur->next;
+		}
+		clients_using = 0;
 	}
 	return 0;
 }
@@ -171,35 +188,25 @@ void connection()
 
 int senddata(int socket_fd)
 {
-	while (1)
+	// 向客户机发送send_buffer中的数据 
+	if (send(socket_fd, send_buffer, BUFFER_SIZE, 0) < 0)
 	{
-		// 输入文件名 并放到缓冲区send_buffer中等待发送 
-		bzero(send_msg, FILE_NAME_MAX_SIZE + 1);
-		scanf("%s", send_msg);
-		bzero(send_buffer, BUFFER_SIZE);
-		strncpy(send_buffer, send_msg, strlen(send_msg) > BUFFER_SIZE ? BUFFER_SIZE : strlen(send_msg));
-
-		// 向客户机发送send_buffer中的数据 
-		if (send(socket_fd, send_buffer, BUFFER_SIZE, 0) < 0)
-		{
-			perror("File Error:");
-			exit(1);
-		}
-
-		if (begin_with(send_msg, "file:") == 1)
-		{
-			strncpy(send_name, send_msg + 5, FILE_NAME_MAX_SIZE - 4);
-			send_file(send_name, socket_fd);//send file
-		}
-
-		if (!strcmp(send_msg, "exit"))
-		{
-			close(socket_fd);
-			puts("Connection closed.");
-			return 0;
-		}
+		perror("File Error:");
+		exit(1);
 	}
 
+	if (begin_with(send_msg, "file:") == 1)
+	{
+		strncpy(send_name, send_msg + 5, FILE_NAME_MAX_SIZE - 4);
+		send_file(send_name, socket_fd);//send file
+	}
+
+	if (!strcmp(send_msg, "exit"))
+	{
+		close(socket_fd);
+		puts("Connection closed.");
+		return 0;
+	}
 }
 
 void* recv_thread(void* sfd)
@@ -231,6 +238,8 @@ void* recv_thread(void* sfd)
 		if (strcmp(recv_msg, "exit") == 0)
 		{
 			list_remove(socket_fd);
+			shutdown(socket_fd, SHUT_RDWR);
+			printf("Connection with client %d closed, %d clients remained.\n", socket_fd, client_count);
 			return NULL;
 		}
 	}
@@ -253,7 +262,7 @@ void* listen_thread()
 		// accept函数会把连接到的客户端信息写到client_addr中
 		puts("Waiting for a new connection...");
 		client.socket_fd = accept(server_socket_fd, (struct sockaddr*)&client.client_addr, &client_addr_length);
-		printf("Connection established, socket file descriptor: %d\n", client.socket_fd);
+		printf("A new connection accepted, socket file descriptor: %d\n", client.socket_fd);
 		if (client.socket_fd < 0)
 		{
 			perror("Server Accept Failed:");
@@ -265,6 +274,8 @@ void* listen_thread()
 		{
 			puts("New thread created failed!");
 		}
+		printf("Connection established, socket file descriptor: %d\n", client.socket_fd);
+		printf("Now %d clients connecting.\n", client_count);
 		printf("New thread created, thread_id: %lX\n", client.conn_thread_id);
 		pthread_detach(client.conn_thread_id); // 线程分离，结束时自动回收资源
 	}
@@ -284,22 +295,35 @@ int list_add(const node* client)
 		return -1;
 	}
 	clients_using = 1;
-	node* p = clients;
-	int socket_fd = client->socket_fd;
-	while (p != NULL)
+	if (0==client_count)
 	{
-		if (socket_fd == p->socket_fd)
+		clients = (node*)malloc(sizeof(node));
+		clients->client_addr = client->client_addr;
+		clients->socket_fd = client->socket_fd;
+		clients->conn_thread_id = client->conn_thread_id;
+		clients->next = NULL;
+		client_count++;
+		clients_using = 0;
+		return 0;
+	}
+	node* p = clients;
+	node* cur = p->next;
+	while (cur != NULL)
+	{
+		if (client->socket_fd == p->socket_fd)
 		{
 			clients_using = 0;
 			return -1;
 		}
-		p = p->next;
+		p = cur;
+		cur = cur->next;
 	}
-	p = (node*)malloc(sizeof(node));
-	p->client_addr = client->client_addr;
-	p->socket_fd = socket_fd;
-	p->conn_thread_id = client->conn_thread_id;
-	p->next = NULL;
+	p->next = (node*)malloc(sizeof(node));
+	cur = p->next;
+	cur->client_addr = client->client_addr;
+	cur->socket_fd = client->socket_fd;
+	cur->conn_thread_id = client->conn_thread_id;
+	cur->next = NULL;
 	client_count++;
 	clients_using = 0;
 	return 0;
