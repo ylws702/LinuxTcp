@@ -4,7 +4,8 @@
 #include<sys/socket.h>  // socket 
 #include<stdio.h>    // printf 
 #include<stdlib.h>    // exit 
-#include<string.h>    // bzero 
+#include<string.h>    
+#include<strings.h>    // bzero 
 #include<arpa/inet.h>
 #include<pthread.h>
 
@@ -58,7 +59,7 @@ void send_file(char* file_name, int socket)
 	else
 	{
 		bzero(send_buffer, BUFFER_SIZE);
-		int length = 0;
+		size_t length = 0;
 		// 每读取一段数据，便将其发送给客户端，循环直到文件读完为止
 		while ((length = fread(send_buffer, sizeof(char), BUFFER_SIZE, fp)) > 0)
 		{
@@ -88,10 +89,10 @@ void recv_file(char* file_name, int sockfd)
 	// 从服务器接收数据到send_buffer中 
 	// 每接收一段数据，便将其写入文件中，循环直到文件接收完并写完为止 
 	bzero(send_buffer, BUFFER_SIZE);
-	int length = 0;
-	while ((length = recv(sockfd, send_buffer, BUFFER_SIZE, 0)) > 0)
+	ssize_t length = 0;
+	while (length = recv(sockfd, send_buffer, BUFFER_SIZE, 0), length > 0)
 	{
-		if (fwrite(send_buffer, sizeof(char), length, fp) < length)
+		if (fwrite(send_buffer, sizeof(char), (size_t)length, fp) < length)
 		{
 			printf("File:\t%s Write Failed\n", file_name);
 			break;
@@ -108,20 +109,11 @@ int begain_with(char *str1, char *str2)
 {
 	if (str1 == NULL || str2 == NULL)
 		return -1;
-	int len1 = strlen(str1);
-	int len2 = strlen(str2);
-	if ((len1 < len2) || (len1 == 0 || len2 == 0))
+	size_t len1 = strlen(str1);
+	size_t len2 = strlen(str2);
+	if (len1 < len2)
 		return -1;
-	char *p = str2;
-	int i = 0;
-	while (*p != '\0')
-	{
-		if (*p != str1[i])
-			return 0;
-		p++;
-		i++;
-	}
-	return 1;
+	return memcmp(str1, str2, len2);
 }
 
 void connection()

@@ -5,7 +5,8 @@
 #include <sys/socket.h> // socket
 #include <stdio.h>    // printf
 #include <stdlib.h>   // exit
-#include <string.h>   // bzero
+#include <string.h>
+#include <strings.h>   // bzero
 #include <pthread.h>
 
 #define SERVER_PORT 5678
@@ -30,29 +31,21 @@ int begain_with(char *str1, char *str2);
 void connection();
 int senddata();
 void* recvdata();
-void deal(int sockfd, pthread_t thread_id);
+void deal(int sockfd, pthread_t* thread_id);
 
 int main(void)
 {
-
 	connection();
-
 	pthread_t thread_id;
-
-
 	while (1)
 	{
 		// 定义客户端的socket地址结构
 		socklen_t client_addr_length = sizeof(client_addr);
-
 		// 接受连接请求，返回一个新的socket(描述符)，这个新socket用于同连接的客户端通信
 		// accept函数会把连接到的客户端信息写到client_addr中
-
 		puts("Waiting for a connection...");
 		new_server_socket_fd = accept(server_socket_fd, (struct sockaddr*)&client_addr, &client_addr_length);
 		puts("Connection established.");
-
-
 		while (1)
 		{
 			if (new_server_socket_fd < 0)
@@ -60,16 +53,14 @@ int main(void)
 				perror("Server Accept Failed:");
 				break;
 			}
-
 			pid_t childid;
-			if (childid = fork() == 0)//子进程
+			if (childid = fork(), childid == 0)//子进程
 			{
 				printf("child process: %d created.\n", getpid());
 				close(server_socket_fd);//在子进程中关闭监听  
-				deal(new_server_socket_fd, thread_id);//处理监听的连接  
+				deal(new_server_socket_fd, &thread_id);//处理监听的连接  
 				exit(0);
 			}
-
 			break;
 		}
 	}
@@ -91,9 +82,10 @@ void send_file(char* file_name, int socket)
 	else
 	{
 		bzero(recv_buffer, BUFFER_SIZE);
-		int length = 0;
+		size_t length = 0;
 		// 每读取一段数据，便将其发送给客户端，循环直到文件读完为止
-		while ((length = fread(recv_buffer, sizeof(char), BUFFER_SIZE, fp)) > 0)
+		while (length = fread(recv_buffer, sizeof(char), BUFFER_SIZE, fp),
+			length > 0)
 		{
 			if (send(socket, recv_buffer, length, 0) < 0)
 			{
@@ -121,10 +113,11 @@ void recv_file(char* file_name, int sockfd)
 	// 从服务器接收数据到recv_buffer中 
 	// 每接收一段数据，便将其写入文件中，循环直到文件接收完并写完为止 
 	bzero(recv_buffer, BUFFER_SIZE);
-	int length = 0;
-	while ((length = recv(sockfd, recv_buffer, BUFFER_SIZE, 0)) > 0)
+	ssize_t length = 0;
+	while (length = recv(sockfd, recv_buffer, BUFFER_SIZE, 0)
+		, length > 0)
 	{
-		if (fwrite(recv_buffer, sizeof(char), length, fp) < length)
+		if (fwrite(recv_buffer, sizeof(char), (size_t)length, fp) < length)
 		{
 			printf("File:\t%s Write Failed\n", file_name);
 			break;
@@ -141,20 +134,11 @@ int begain_with(char *str1, char *str2)
 {
 	if (str1 == NULL || str2 == NULL)
 		return -1;
-	int len1 = strlen(str1);
-	int len2 = strlen(str2);
-	if ((len1 < len2) || (len1 == 0 || len2 == 0))
+	size_t len1 = strlen(str1);
+	size_t len2 = strlen(str2);
+	if (len1 < len2)
 		return -1;
-	char *p = str2;
-	int i = 0;
-	while (*p != '\0')
-	{
-		if (*p != str1[i])
-			return 0;
-		p++;
-		i++;
-	}
-	return 1;
+	return memcmp(str1, str2, len2);
 }
 
 void connection()
@@ -256,11 +240,11 @@ void* recvdata()
 	}
 }
 
-void deal(int sockfd, pthread_t thread_id)
+void deal(int sockfd, pthread_t* thread_id)
 {
 
-	pthread_create(&thread_id, NULL, recvdata, NULL);  //创建线程
-	pthread_detach(thread_id); // 线程分离，结束时自动回收资源
+	pthread_create(thread_id, NULL, recvdata, NULL);  //创建线程
+	pthread_detach(*thread_id); // 线程分离，结束时自动回收资源
 
 	senddata();
 

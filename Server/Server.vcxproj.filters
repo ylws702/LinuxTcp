@@ -10,13 +10,5 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
-    <ClCompile Include="server.c">
-      <Filter>Source</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="server.h">
-      <Filter>Header</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

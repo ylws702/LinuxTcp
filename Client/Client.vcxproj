@@ -63,6 +63,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\lib\gcc\x86_64-linux-gnu\7\include;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\local\include;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\lib\gcc\x86_64-linux-gnu\7\include-fixed;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\include\x86_64-linux-gnu;C:\Users\14433\AppData\Local\Microsoft\Linux\Header Cache\1.0\1410691227\usr\include;$(LibraryPath)</LibraryPath>
     <RemoteLdToolExe>gcc</RemoteLdToolExe>
+    <RemoteCCompileToolExe>gcc</RemoteCCompileToolExe>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
@@ -73,6 +74,11 @@
     <Link>
       <LibraryDependencies>pthread</LibraryDependencies>
     </Link>
+    <ClCompile>
+      <CppLanguageStandard>c++17</CppLanguageStandard>
+      <ThreadSafeStatics />
+      <RuntimeTypeInfo />
+    </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
